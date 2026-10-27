@@ -1,0 +1,178 @@
+@model CurrencyExchange.Models.ViewModels.ReportViewModel
+@{
+    ViewData["Title"] = "Отчёты и статистика";
+    var labels = string.Join(",", Model.DailyProfits.Select(d => $"\"{d.Date}\""));
+    var profits = string.Join(",", Model.DailyProfits.Select(d => d.Profit.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)));
+    var txCounts = string.Join(",", Model.DailyProfits.Select(d => d.Transactions));
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0"><i class="bi bi-bar-chart-fill text-success me-2"></i>Отчёты и статистика</h1>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small text-muted">С даты</label>
+                <input type="date" name="dateFrom" class="form-control"
+                       value="@Model.PeriodStart.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small text-muted">По дату</label>
+                <input type="date" name="dateTo" class="form-control"
+                       value="@Model.PeriodEnd.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-funnel me-1"></i>Применить
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- KPI карточки -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm text-center">
+            <div class="card-body">
+                <div class="display-6 text-success fw-bold">@Model.TotalProfit.ToString("N0") ₽</div>
+                <div class="text-muted small mt-1">Прибыль</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm text-center">
+            <div class="card-body">
+                <div class="display-6 text-primary fw-bold">@Model.TotalTransactions</div>
+                <div class="text-muted small mt-1">Операций</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm text-center">
+            <div class="card-body">
+                <div class="display-6 text-info fw-bold">@Model.TotalVolume.ToString("N0")</div>
+                <div class="text-muted small mt-1">Объём</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm text-center">
+            <div class="card-body">
+                <div class="display-6 fw-bold">
+                    <span class="text-success">@Model.BuyCount</span>
+                    <span class="text-muted fs-4">/</span>
+                    <span class="text-danger">@Model.SellCount</span>
+                </div>
+                <div class="text-muted small mt-1">Покупка / Продажа</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- График прибыли по дням -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-light">
+                <h6 class="mb-0"><i class="bi bi-graph-up-arrow me-2 text-success"></i>Прибыль по дням</h6>
+            </div>
+            <div class="card-body">
+                @if (Model.DailyProfits.Any())
+                {
+                    <canvas id="profitChart" height="250"></canvas>
+                }
+                else
+                {
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-bar-chart display-4 d-block mb-2"></i>
+                        Нет данных за выбранный период
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Топ валюты -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-light">
+                <h6 class="mb-0"><i class="bi bi-trophy me-2 text-warning"></i>Топ валюты</h6>
+            </div>
+            <div class="card-body p-0">
+                @if (Model.TopCurrencies.Any())
+                {
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Валюта</th>
+                                <th class="text-end">Операций</th>
+                                <th class="text-end">Прибыль</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var c in Model.TopCurrencies)
+                            {
+                                <tr>
+                                    <td><span class="badge bg-primary">@c.CurrencyCode</span></td>
+                                    <td class="text-end small">@c.Count</td>
+                                    <td class="text-end fw-semibold text-success">@c.Profit.ToString("N0") ₽</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <p class="text-muted text-center py-4 mb-0">Нет данных</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+@if (Model.DailyProfits.Any())
+{
+<script>
+const ctx = document.getElementById('profitChart').getContext('2d');
+new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: [@Html.Raw(labels)],
+        datasets: [
+            {
+                label: 'Прибыль (₽)',
+                data: [@Html.Raw(profits)],
+                backgroundColor: 'rgba(25, 135, 84, 0.7)',
+                borderColor: 'rgba(25, 135, 84, 1)',
+                borderWidth: 1,
+                yAxisID: 'y'
+            },
+            {
+                label: 'Операции',
+                data: [@Html.Raw(txCounts)],
+                type: 'line',
+                borderColor: 'rgba(13, 110, 253, 0.8)',
+                backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                borderWidth: 2,
+                pointRadius: 4,
+                fill: false,
+                yAxisID: 'y1'
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        interaction: { mode: 'index', intersect: false },
+        scales: {
+            y:  { position: 'left',  title: { display: true, text: 'Прибыль (₽)' } },
+            y1: { position: 'right', title: { display: true, text: 'Операции' }, grid: { drawOnChartArea: false } }
+        }
+    }
+});
+</script>
+}
+}

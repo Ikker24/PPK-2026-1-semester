@@ -1,0 +1,42 @@
+:root {
+    --bs-primary: #1a6fc4;
+}
+
+body {
+    background-color: #f8f9fa;
+}
+
+.hover-card {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    color: inherit;
+}
+.hover-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 .5rem 1.5rem rgba(0,0,0,.12) !important;
+}
+
+.navbar-brand {
+    font-size: 1.3rem;
+    letter-spacing: .5px;
+}
+
+.card {
+    border-radius: .75rem;
+}
+
+.badge {
+    font-weight: 600;
+    letter-spacing: .3px;
+}
+
+.table th {
+    font-weight: 600;
+    font-size: .85rem;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: #6c757d;
+}
+
+footer {
+    background-color: #f8f9fa;
+}

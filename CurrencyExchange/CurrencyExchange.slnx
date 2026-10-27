@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="../CurrencyExchangeTests/CurrencyExchangeTests.csproj" Id="86d43578-949c-4e8b-8049-0eca2c281ea2" />
+  <Project Path="CurrencyExchange.csproj" />
+</Solution>

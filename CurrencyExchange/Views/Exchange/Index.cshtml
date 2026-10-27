@@ -1,0 +1,182 @@
+@model CurrencyExchange.Models.ViewModels.ExchangeViewModel
+@{
+    ViewData["Title"] = "Обмен валют";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0"><i class="bi bi-arrow-left-right text-primary me-2"></i>Обмен валют</h1>
+
+    <form method="post" action="/Currencies/AddByCode" class="d-flex gap-2 align-items-center">
+        <input name="code" class="form-control" style="width:170px" placeholder="Код валюты" maxlength="6" required />
+        <input type="hidden" name="buyMargin" value="1.5" />
+        <input type="hidden" name="sellMargin" value="1.5" />
+        <button type="submit" class="btn btn-outline-success">
+            <i class="bi bi-plus-lg me-1"></i>Добавить
+        </button>
+        <a class="btn btn-outline-primary" href="/Currencies" role="button">
+            <i class="bi bi-gear me-1"></i>Валюты
+        </a>
+    </form>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-calculator me-2"></i>Калькулятор обмена</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="/Exchange/Calculate" id="calcForm">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Отдаёт клиент</label>
+                            <select name="FromCurrencyId" class="form-select form-select-lg" id="fromCurrency" onchange="updateType()">
+                                @foreach (var c in Model.Currencies)
+                                {
+                                    if (Model.FromCurrencyId == c.Id)
+                                    {
+                                        <option value="@c.Id" selected>@c.Code — @c.Name</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@c.Id">@c.Code — @c.Name</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Получает клиент</label>
+                            <select name="ToCurrencyId" class="form-select form-select-lg" id="toCurrency" onchange="updateType()">
+                                @foreach (var c in Model.Currencies)
+                                {
+                                    if (Model.ToCurrencyId == c.Id)
+                                    {
+                                        <option value="@c.Id" selected>@c.Code — @c.Name</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@c.Id">@c.Code — @c.Name</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Сумма</label>
+                            <div class="input-group input-group-lg">
+                                <input type="number" name="Amount" class="form-control" placeholder="0.00"
+                                       value="@(Model.Amount > 0 ? Model.Amount.ToString() : "")"
+                                       step="0.01" min="0.01" required />
+                                <span class="input-group-text" id="amountSymbol">—</span>
+                            </div>
+                        </div>
+                        <input type="hidden" name="Type" id="txType" value="@((int)Model.Type)" />
+                    </div>
+
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg flex-fill">
+                            <i class="bi bi-calculator me-2"></i>Рассчитать
+                        </button>
+                        <a href="/Exchange" class="btn btn-outline-secondary btn-lg">
+                            <i class="bi bi-x-lg"></i>
+                        </a>
+                    </div>
+                </form>
+
+                @if (Model.ResultAmount.HasValue)
+                {
+                    <div class="alert alert-success mt-4 mb-0">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <div class="fs-5 fw-bold">
+                                    <i class="bi bi-check-circle-fill me-2"></i>
+                                    Клиент получит: <span class="text-success">@Model.ResultAmount.Value.ToString("N2")</span>
+                                </div>
+                                <small class="text-muted">Курс: @Model.AppliedRate.Value.ToString("N4") ₽</small>
+                            </div>
+                            <div class="col-auto">
+                                <form method="post" action="/Exchange/Execute">
+                                    <input type="hidden" name="FromCurrencyId" value="@Model.FromCurrencyId" />
+                                    <input type="hidden" name="ToCurrencyId"   value="@Model.ToCurrencyId" />
+                                    <input type="hidden" name="Amount"         value="@Model.Amount" />
+                                    <input type="hidden" name="Type"           value="@((int)Model.Type)" />
+                                    <button type="submit" class="btn btn-success btn-lg">
+                                        <i class="bi bi-check2-all me-1"></i>Провести
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(Model.Message))
+                {
+                    <div class="alert alert-warning mt-4 mb-0">
+                        <i class="bi bi-exclamation-triangle me-2"></i>@Model.Message
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-light">
+                <h6 class="mb-0"><i class="bi bi-table me-2"></i>Текущие курсы</h6>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Валюта</th>
+                            <th class="text-success">Покупка</th>
+                            <th class="text-danger">Продажа</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var rate in Model.CurrentRates)
+                        {
+                            var cur = Model.Currencies.FirstOrDefault(c => c.Id == rate.CurrencyId);
+                            if (cur == null) continue;
+                            <tr>
+                                <td><span class="badge bg-primary me-1">@cur.Code</span> @cur.Symbol</td>
+                                <td class="text-success fw-semibold">@rate.BuyRate.ToString("N2")</td>
+                                <td class="text-danger fw-semibold">@rate.SellRate.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                @if (!Model.CurrentRates.Any())
+                {
+                    <p class="text-muted text-center py-3 mb-0">
+                        <i class="bi bi-exclamation-circle me-1"></i>
+                        Курсы не загружены. <a href="/Home/RefreshRates" onclick="this.closest('form')?.submit()">Обновить</a>
+                    </p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+const currencies = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+    Model.Currencies.Select(c => new { c.Id, c.Code, c.Symbol })));
+
+function updateType() {
+    const fromId = parseInt(document.getElementById('fromCurrency').value);
+    const toId   = parseInt(document.getElementById('toCurrency').value);
+    const fromC  = currencies.find(c => c.id === fromId);
+    const toC    = currencies.find(c => c.id === toId);
+
+    // Определяем тип операции
+    // Buy = клиент продаёт иностранную (пункт покупает)
+    // Sell = клиент покупает иностранную (пункт продаёт)
+    let type = 1; // Sell
+    if (fromC && fromC.code !== 'RUB') type = 0; // Buy
+
+    document.getElementById('txType').value = type;
+    document.getElementById('amountSymbol').textContent = fromC ? fromC.symbol : '—';
+}
+updateType();
+</script>
+}

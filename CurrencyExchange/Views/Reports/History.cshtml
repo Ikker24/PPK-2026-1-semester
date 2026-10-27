@@ -1,0 +1,114 @@
+@model CurrencyExchange.Models.ViewModels.HistoryViewModel
+@{
+    ViewData["Title"] = "История операций";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0"><i class="bi bi-clock-history text-warning me-2"></i>История операций</h1>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small text-muted">Валюта</label>
+                <input type="text" name="currency" class="form-control" placeholder="USD, EUR..."
+                       value="@Model.FilterCurrency" maxlength="3" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small text-muted">С даты</label>
+                <input type="date" name="dateFrom" class="form-control"
+                       value="@Model.DateFrom?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small text-muted">По дату</label>
+                <input type="date" name="dateTo" class="form-control"
+                       value="@Model.DateTo?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-fill">
+                    <i class="bi bi-funnel me-1"></i>Фильтр
+                </button>
+                <a href="/Reports/History" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (!Model.Transactions.Any())
+{
+    <div class="alert alert-info text-center py-5">
+        <i class="bi bi-inbox display-4 d-block mb-3 text-muted"></i>
+        Операций не найдено.
+        <a href="/Exchange" class="btn btn-primary mt-3 d-block mx-auto" style="max-width:200px">
+            Провести обмен
+        </a>
+    </div>
+}
+else
+{
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>Дата и время</th>
+                        <th>Тип</th>
+                        <th>Отдал</th>
+                        <th></th>
+                        <th>Получил</th>
+                        <th>Курс</th>
+                        <th class="text-end">Прибыль</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var t in Model.Transactions)
+                    {
+                        <tr>
+                            <td class="text-muted small">@t.Id</td>
+                            <td class="small">@t.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
+                            <td>
+                                @if (t.Type == CurrencyExchange.Models.TransactionType.Buy)
+                                {
+                                    <span class="badge bg-success">Покупка</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger">Продажа</span>
+                                }
+                            </td>
+                            <td class="fw-semibold">
+                                @t.FromAmount.ToString("N2")
+                                <span class="text-muted small">@t.FromCurrency.Code</span>
+                            </td>
+                            <td class="text-muted"><i class="bi bi-arrow-right"></i></td>
+                            <td class="fw-semibold text-primary">
+                                @t.ToAmount.ToString("N2")
+                                <span class="text-muted small">@t.ToCurrency.Code</span>
+                            </td>
+                            <td class="small text-muted">@t.Rate.ToString("N4")</td>
+                            <td class="text-end text-success fw-semibold">@t.Profit.ToString("N2") ₽</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    @if (Model.TotalPages > 1)
+    {
+        <nav class="mt-3">
+            <ul class="pagination justify-content-center">
+                @for (int i = 1; i <= Model.TotalPages; i++)
+                {
+                    <li class="page-item @(i == Model.Page ? "active" : "")">
+                        <a class="page-link" href="/Reports/History?page=@i&currency=@Model.FilterCurrency&dateFrom=@Model.DateFrom?.ToString("yyyy-MM-dd")&dateTo=@Model.DateTo?.ToString("yyyy-MM-dd")">@i</a>
+                    </li>
+                }
+            </ul>
+        </nav>
+    }
+}
